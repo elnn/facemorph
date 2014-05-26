@@ -1,4 +1,7 @@
-function output = facemorph(img1, img2, points1, points2, ratio)
+function facemorph(infile1, infile2, outfile, points1, points2, ratio)
+
+img1 = imread(infile1);
+img2 = imread(infile2);
 
 assert(all(size(img1) == size(img2)));
 assert(all(size(points1) == size(points2)));
@@ -48,3 +51,7 @@ end
 
 output(find(output < 0)) = 0;
 output = output / max(output(:));
+
+imwrite(output, outfile);
+
+endfunction

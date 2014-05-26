@@ -5,7 +5,6 @@ import numpy
 import oct2py
 import os.path
 import pymongo
-import scipy.misc
 import StringIO
 import tornado.escape
 import tornado.httpserver
@@ -116,20 +115,21 @@ class MixHandler(BaseHandler):
             item2 = self.db.faces.find_one({"hash": hash2})
             if (not item1) or (not item2):
                 raise tornado.web.HTTPError(404)
-            path1 = os.path.join(self.settings["static_path"], "faces", "%s.jpg" % hash1)
-            path2 = os.path.join(self.settings["static_path"], "faces", "%s.jpg" % hash2)
-            img1 = scipy.misc.imread(path1)
-            img2 = scipy.misc.imread(path2)
+            infile1 = os.path.join(self.settings["static_path"], "faces", "%s.jpg" % hash1)
+            infile2 = os.path.join(self.settings["static_path"], "faces", "%s.jpg" % hash2)
+            outfile = os.path.join(self.settings["static_path"], "faces", "%s.jpg" % hash)
             points1 = numpy.array(item1["points"], dtype=float)
             points2 = numpy.array(item2["points"], dtype=float)
             ratio = 0.5
-            output = oct2py.octave.call('facemorph', img1, img2, points1, points2, ratio)
+            print infile1
+            print infile2
+            print points1
+            print points2
+            output = oct2py.octave.call('facemorph', infile1, infile2, outfile, points1, points2, ratio)
             p = points1 + ratio * (points2 - points1)
             self.db.faces.insert({"hash": hash,
                                   "points": p.tolist(),
                                   "parent": [hash1, hash2]})
-            path = os.path.join(self.settings["static_path"], "faces", "%s.jpg" % hash)
-            scipy.misc.imsave(path, output)
         self.redirect("/view/%s" % hash)
 
 
