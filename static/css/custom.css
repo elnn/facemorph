@@ -1,6 +1,6 @@
 @import url(http://fonts.googleapis.com/earlyaccess/nanumgothic.css);
 body > .container { margin-top: 30px; margin-bottom: 30px; }
 .alert, .btn { padding: 10px 18px; font-family: 'Nanum Gothic', sans-serif; }
-.img-face { max-width: 180px; margin-bottom: 10px; cursor: pointer; }
+.img-face { max-width: 175px; margin-bottom: 10px; cursor: pointer; }
 .img-face.selected { background-color: #2980B9; }
 .canvas-face { display: block; margin: 10px auto; cursor: pointer; }
