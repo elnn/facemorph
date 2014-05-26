@@ -121,11 +121,7 @@ class MixHandler(BaseHandler):
             points1 = numpy.array(item1["points"], dtype=float)
             points2 = numpy.array(item2["points"], dtype=float)
             ratio = 0.5
-            print infile1
-            print infile2
-            print points1
-            print points2
-            output = oct2py.octave.call('facemorph', infile1, infile2, outfile, points1, points2, ratio)
+            oct2py.octave.call('facemorph', infile1, infile2, outfile, points1, points2, ratio)
             p = points1 + ratio * (points2 - points1)
             self.db.faces.insert({"hash": hash,
                                   "points": p.tolist(),
