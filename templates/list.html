@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block menu-list %} class="active"{% end %}
+{% block body %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="alert alert-info">
+                CTRL 키를 누른 채로 클릭하면 합성할 사진을 선택할 수 있습니다.
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <ul class="list-inline">
+            {% for item in items %}
+                <li>
+                    <img id="{{ item["hash"] }}" src="/static/faces/{{ item["hash"] }}.jpg" class="img-thumbnail img-face">
+                </li>
+            {% end %}
+            </ul>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+$("img").click(function(e) {
+    var id = $(this).attr("id");
+    if (e.metaKey || e.ctrlKey) {
+        $(this).toggleClass("selected");
+        var elem = $(document).find(".selected");
+        if (elem.length == 2) {
+            var form = $("<form></form>").attr("method", "post").attr("action", "/mix").css({"display": "none"});
+            $("<input>").attr("name", "hash1").attr("value", $(elem[0]).attr("id")).appendTo(form);
+            $("<input>").attr("name", "hash2").attr("value", $(elem[1]).attr("id")).appendTo(form);
+            form.appendTo("body").submit();
+        }
+    } else {
+        window.open("/view/" + id);
+    }
+});
+</script>
+{% end %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12 text-center">
+            {% if item["parent"] %}
+            <ul class="list-inline">
+                <li><a href="/view/{{ item["parent"][0] }}"><img src="/static/faces/{{ item["parent"][0] }}.jpg" class="img-polaroid img-face"></a></li>
+                <li><a href="/view/{{ item["parent"][1] }}"><img src="/static/faces/{{ item["parent"][1] }}.jpg" class="img-polaroid img-face"></a></li>
+            </ul>
+            {% end %}
+            <p><img src="/static/faces/{{ item["hash"] }}.jpg" class="img-polaroid"></p>
+        </div>
+    </div>
+</div>
+{% end %}

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block menu-upload %} class="active"{% end %}
+{% block body %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-6">
+            <canvas id="canvas1" class="canvas-face" width="400" height="400"></canvas>
+            <div id="message" class="alert alert-info"></div>
+        </div>
+        <div class="col-lg-6">
+            <canvas id="canvas2" class="canvas-face" width="400" height="400"></canvas>
+            <div class="btn-group btn-group-justified">
+                <div class="btn-group">
+                    <button id="revert" type="button" class="btn btn-success">되돌리기(단축키: z)</button>
+                </div>
+                <div class="btn-group">
+                    <button id="submit" type="button" class="btn btn-primary">완료</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+$(window).load(function() {
+    function drawCircle(ctx, x, y) {
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, 2*Math.PI, false);
+        ctx.fillStyle = "#6A5ACD";
+        ctx.fill();
+    }
+    var points = [];
+    var canvas1 = document.getElementById("canvas1");
+    var canvas2 = document.getElementById("canvas2");
+    var ctx1 = canvas1.getContext("2d");
+    var ctx2 = canvas2.getContext("2d");
+    var img1 = new Image();
+    img1.onload = function() {
+        ctx1.drawImage(img1, 0, 0, canvas1.width, canvas1.height);
+    };
+    img1.src = "/static/faces/{{ hash }}.jpg";
+    var img2 = new Image();
+    img2.onload = function() {
+        ctx2.drawImage(img2, 0, 0, canvas2.width, canvas2.height);
+        drawCircle(ctx2, target[idx].x, target[idx].y);
+    };
+    img2.src = "/static/img/iu.jpg";
+    var idx = 0;
+    var target = [{text: "1. 왼쪽 눈의 바깥쪽 끝을 클릭해주세요.", x: 85, y: 162},
+                  {text: "2. 왼쪽 눈의 안쪽 끝을 클릭해주세요.", x: 152, y: 174},
+                  {text: "3. 왼쪽 눈의 위쪽 끝을 클릭해주세요.", x: 119, y: 148},
+                  {text: "4. 왼쪽 눈의 아래쪽 끝을 클릭해주세요.", x: 116, y: 175},
+                  {text: "5. 왼쪽 눈의 홍채 가운데를 클릭해주세요.", x: 126, y: 159},
+                  {text: "6. 오른쪽 눈의 바깥쪽 끝을 클릭해주세요.", x: 302, y: 164},
+                  {text: "7. 오른쪽 눈의 안쪽 끝을 클릭해주세요.", x: 234, y: 174},
+                  {text: "8. 오른쪽 눈의 위쪽 끝을 클릭해주세요.", x: 265, y: 149},
+                  {text: "9. 오른쪽 눈의 아래쪽 끝을 클릭해주세요.", x: 267, y: 175},
+                  {text: "10. 오른쪽 눈의 홍채 가운데를 클릭해주세요.", x: 262, y: 160},
+                  {text: "11. 코의 가운데 아래쪽 끝을 클릭해주세요.", x: 191, y: 264},
+                  {text: "12. 코의 왼쪽 끝을 클릭해주세요.", x: 157, y: 256},
+                  {text: "13. 코의 오른쪽 끝을 클릭해주세요.", x: 231, y: 252},
+                  {text: "14. 코의 가장 높은 부분을 클릭해주세요.", x: 191, y: 240},
+                  {text: "15. 입의 위쪽 끝을 클릭해주세요.", x: 194, y: 296},
+                  {text: "16. 입의 아래쪽 끝을 클릭해주세요.", x: 192, y: 340},
+                  {text: "17. 입의 왼쪽 끝을 클릭해주세요.", x: 145, y: 313},
+                  {text: "18. 입의 오른쪽 끝을 클릭해주세요.", x: 241, y: 314},
+                  {text: "19. 아랫입술 가운데 윗 부분을 클릭해주세요.", x: 194, y: 315},
+                  {text: "20. 왼쪽 눈썹 왼쪽 끝을 클릭해주세요.", x: 73, y: 135},
+                  {text: "21. 왼쪽 눈썹 오른쪽 끝을 클릭해주세요.", x: 161, y: 137},
+                  {text: "22. 오른쪽 눈썹 왼쪽 끝을 클릭해주세요.", x: 226, y: 136},
+                  {text: "23. 오른쪽 눈썹 오른쪽 끝을 클릭해주세요.", x: 316, y: 137},
+                  {text: "24. 얼굴 중심에서 위쪽 끝을 클릭해주세요.", x: 201, y: 12},
+                  {text: "25. 얼굴 중심에서 아래쪽 끝을 클릭해주세요.", x: 192, y: 394},
+                  {text: "26. 얼굴의 왼쪽을 클릭해주세요.", x: 57, y: 236},
+                  {text: "27. 얼굴의 오른쪽을 클릭해주세요.", x: 336, y: 242},
+                  {text: "28. 얼굴의 오른쪽 위를 클릭해주세요.", x: 319, y: 63},
+                  {text: "29. 얼굴의 오른쪽 아래를 클릭해주세요.", x: 301, y: 329},
+                  {text: "30. 얼굴의 왼쪽 아래를 클릭해주세요.", x: 89, y: 328},
+                  {text: "31. 얼굴의 왼쪽 위를 클릭해주세요.", x: 63, y: 78},
+                  {text: "끝~ 완료 버튼을 눌러주세요!"}];
+    $("#message").text(target[idx].text);
+    $("#submit").hide();
+    $(canvas1).click(function(e) {
+        if (idx < target.length - 1) {
+            var x = e.offsetX;
+            var y = e.offsetY;
+            drawCircle(ctx1, x, y);
+            points.push([x, y]);
+            $("#message").text(target[++idx].text);
+            ctx2.drawImage(img2, 0, 0, canvas2.width, canvas2.height);
+            if (idx < target.length - 1)
+                drawCircle(ctx2, target[idx].x, target[idx].y);
+            else
+                $("#submit").show();
+        }
+    });
+    $("body").keypress(function(e) {
+        if (e.which == 122)
+            $("#revert").click();
+    });
+    $("#revert").click(function(e) {
+        if (idx > 0) {
+            points.pop();
+            ctx1.drawImage(img1, 0, 0, canvas1.width, canvas1.height);
+            $.each(points, function(_, p) { drawCircle(ctx1, p[0], p[1]); });
+            $("#message").text(target[--idx].text);
+            ctx2.drawImage(img2, 0, 0, canvas2.width, canvas2.height);
+            drawCircle(ctx2, target[idx].x, target[idx].y);
+            $("#submit").hide();
+        }
+    });
+    $("#submit").click(function(e) {
+        var form = document.createElement("form");
+        form.setAttribute("method", "post");
+        var field = document.createElement("input");
+        field.setAttribute("name", "points");
+        field.setAttribute("value", JSON.stringify(points));
+        form.appendChild(field);
+        form.submit();
+    });
+});
+</script>
+{% end %}

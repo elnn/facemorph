@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block menu-upload %} class="active"{% end %}
+{% block body %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="alert alert-info">
+                업로드한 이미지는 400x400 크기로 변경됩니다.
+            </div>
+            <form action="/upload" method="post" class="form-inline" role="form" enctype="multipart/form-data">
+                <input type="file" name="image">
+                <div class="form-group">
+                    <input id="cover" class="form-control" type="text" disabled>
+                </div>
+                <a class="btn btn-default" onclick="$('input[name=image]').click();">Browse</a>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </form>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">$('input[name=image]').hide().change(function() { $('#cover').val($(this).val().split('\\').pop()); });</script>
+{% end %}
