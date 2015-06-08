@@ -1,5 +1,10 @@
-# Facemorph
+Facemorph
+=========
 
-Interactive face evolution
+Interactive face evolution.
 
-Demo: http://elnn.uriel.upnl.org:5897/
+
+Demo
+----
+
+http://facemorph.elnn.kr/
