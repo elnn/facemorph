@@ -1,139 +1,177 @@
-#!/usr/bin/env python
 import hashlib
-import Image
-import numpy
-import oct2py
 import os.path
 import pymongo
+
+import Image
 import StringIO
+
+import numpy as np
+import oct2py
+
 import tornado.escape
 import tornado.httpserver
 import tornado.ioloop
-import tornado.options
 import tornado.web
 
-tornado.options.define("port", default=5897, help="run on the given port", type=int)
+from tornado.options import define, options
+define('port', default=5897, help='run on the given port', type=int)
 
 
 class Application(tornado.web.Application):
+
     def __init__(self):
+        base_dir = os.path.dirname(__file__)
         settings = {
-            "cookie_secret": "younhaholic",
-            "static_path": os.path.join(os.path.dirname(__file__), "static"),
-            "template_path": os.path.join(os.path.dirname(__file__), "templates"),
+            'static_path': os.path.join(base_dir, 'static'),
+            'template_path': os.path.join(base_dir, 'templates'),
+            'default_handler_class': ErrorHandler,
+            'default_handler_args': dict(status_code=404),
+            'debug': True,
         }
+
         handlers = [
-            (r"/", MainHandler),
-            (r"/view/(.*)", ViewHandler),
-            (r"/list", ListHandler),
-            (r"/upload", UploadHandler),
-            (r"/prepare/(.*)", PrepareHandler),
-            (r"/mix", MixHandler),
+            (r'/', ListHandler),
+            (r'/upload', UploadHandler),
+            (r'/upload/(\w+)', PrepareHandler),
+            (r'/api/add', ApiAddHandler),
+            (r'/api/mix', ApiMixHandler),
         ]
-        tornado.web.ErrorHandler = ErrorHandler
+
+        self.db = pymongo.MongoClient().facemorph
+        self.db.faces.create_index('hash')
+
+        oct2py.octave.addpath(settings['static_path'])
+
         tornado.web.Application.__init__(self, handlers, **settings)
-        self.mongo = pymongo.Connection().elnn
 
 
 class BaseHandler(tornado.web.RequestHandler):
+
     @property
     def db(self):
-        return self.application.mongo
+        return self.application.db
 
-    def get_error_html(self, status_code, **kwargs):
-        return self.render_string("error.html", status_code=status_code)
+    @property
+    def face_dir(self):
+        return os.path.join(self.settings['static_path'], 'img', 'faces')
 
+    def write_error(self, status_code, **kwargs):
+        self.render('error.html', status_code=status_code)
 
-class ErrorHandler(BaseHandler):
-    def __init__(self, application, request, status_code):
-        tornado.web.RequestHandler.__init__(self, application, request)
-        self.set_status(status_code)
-
-    def prepare(self):
-        raise tornado.web.HTTPError(self._status_code)
+    def hashify(self, text):
+        return hashlib.sha256(text).hexdigest()[:12]
 
 
-class MainHandler(BaseHandler):
-    @tornado.web.addslash
-    def get(self):
-        self.redirect("/list")
-
-
-class ViewHandler(BaseHandler):
-    def get(self, hash):
-        item = self.db.faces.find_one({"hash": hash})
-        if not item:
-            raise tornado.web.HTTPError(404)
-        else:
-            self.render("view.html", item=item)
+class ErrorHandler(tornado.web.ErrorHandler, BaseHandler):
+    pass
 
 
 class ListHandler(BaseHandler):
+
     def get(self):
-        items = self.db.faces.find()
-        self.render("list.html", items=items)
+        items = list(self.db.faces.find())
+        self.render('list.html', items=items)
 
 
 class UploadHandler(BaseHandler):
+
     def get(self):
-        self.render("upload.html")
+        self.render('upload.html')
 
     def post(self):
-        body = self.request.files["image"][0]["body"]
-        img = Image.open(StringIO.StringIO(body)).resize((400, 400))
-        hash = hashlib.md5(body).hexdigest()[:8]
-        path = os.path.join(self.settings["static_path"], "faces", "%s.jpg" % hash)
+        body = self.request.files['image'][0]['body']
+        img = Image.open(StringIO.StringIO(body)).resize((300, 300))
+        hash = self.hashify(img.tobytes())
+        path = os.path.join(self.face_dir, '%s.png' % hash)
         img.save(path)
-        self.redirect("/prepare/%s" % hash)
+        self.redirect('/upload/%s' % hash)
 
 
 class PrepareHandler(BaseHandler):
+
     def get(self, hash):
-        if self.db.faces.find_one({"hash": hash}):
-            self.redirect("/view/%s" % hash)
-        else:
-            self.render("prepare.html", hash=hash)
-
-    def post(self, hash):
-        if not self.db.faces.find_one({"hash": hash}):
-            points = tornado.escape.json_decode(self.get_argument("points"))
-            self.db.faces.insert({"hash": hash,
-                                  "points": points,
-                                  "parent": None})
-        self.redirect("/view/%s" % hash)
+        self.render('prepare.html', hash=hash)
 
 
-class MixHandler(BaseHandler):
+class ApiAddHandler(BaseHandler):
+
     def post(self):
-        hash1 = self.get_argument("hash1")
-        hash2 = self.get_argument("hash2")
+        hash = self.get_argument('hash', '')
+        points = tornado.escape.json_decode(self.get_argument('points', '[]'))
+
+        if self.db.faces.find_one({'hash': hash}):
+            self.write(tornado.escape.json_encode({
+                'error': True,
+                'error_reason': 'Hash `%s` already exists.' % hash,
+            }))
+
+        elif len(points) != 31:
+            self.write(tornado.escape.json_encode({
+                'error': True,
+                'error_reason': 'The number of feature points is not correct.',
+            }))
+
+        else:
+            self.db.faces.insert({
+                'hash': hash,
+                'points': points,
+                'parent': None,
+                'ratio': None,
+            })
+
+            self.write(tornado.escape.json_encode({
+                'error': False,
+                'error_reason': None,
+            }))
+
+
+class ApiMixHandler(BaseHandler):
+
+    def post(self):
+        hash1 = self.get_argument('hash1', '')
+        hash2 = self.get_argument('hash2', '')
         if hash1 > hash2:
             hash1, hash2 = hash2, hash1
-        hash = hashlib.md5(hash1 + hash2).hexdigest()[:8]
-        if not self.db.faces.find_one({"hash": hash}):
-            item1 = self.db.faces.find_one({"hash": hash1})
-            item2 = self.db.faces.find_one({"hash": hash2})
-            if (not item1) or (not item2):
-                raise tornado.web.HTTPError(404)
-            infile1 = os.path.join(self.settings["static_path"], "faces", "%s.jpg" % hash1)
-            infile2 = os.path.join(self.settings["static_path"], "faces", "%s.jpg" % hash2)
-            outfile = os.path.join(self.settings["static_path"], "faces", "%s.jpg" % hash)
-            points1 = numpy.array(item1["points"], dtype=float)
-            points2 = numpy.array(item2["points"], dtype=float)
-            ratio = 0.5
-            oct2py.octave.call('facemorph', infile1, infile2, outfile, points1, points2, ratio)
-            p = points1 + ratio * (points2 - points1)
-            self.db.faces.insert({"hash": hash,
-                                  "points": p.tolist(),
-                                  "parent": [hash1, hash2]})
-        self.redirect("/view/%s" % hash)
+        item1 = self.db.faces.find_one({'hash': hash1})
+        item2 = self.db.faces.find_one({'hash': hash2})
+
+        if (not item1) or (not item2):
+            self.write(tornado.escape.json_encode({
+                'error': True,
+                'error_reason': 'The given hash does not exist.',
+            }))
+
+        else:
+            infile1 = os.path.join(self.face_dir, '%s.png' % hash1)
+            infile2 = os.path.join(self.face_dir, '%s.png' % hash2)
+            points1 = np.array(item1['points'], dtype=float)
+            points2 = np.array(item2['points'], dtype=float)
+
+            for i in xrange(1, 10):
+                ratio = 0.1 * i
+                hash3 = self.hashify(hash1 + hash2 + str(i))
+
+                if not self.db.faces.find_one({'hash': hash3}):
+                    outfile = os.path.join(self.face_dir, '%s.png' % hash3)
+                    oct2py.octave.facemorph(infile1, infile2, outfile,
+                                            points1, points2, ratio)
+                    points3 = points1 + ratio * (points2 - points1)
+
+                    self.db.faces.insert({
+                        'hash': hash3,
+                        'points': points3.tolist(),
+                        'parent': [hash1, hash2],
+                        'ratio': ratio,
+                    })
+
+            self.write(tornado.escape.json_encode({
+                'error': False,
+                'error_reason': None,
+            }))
 
 
-def main():
-    tornado.options.parse_command_line()
+if __name__ == '__main__':
+    options.parse_command_line()
     httpserver = tornado.httpserver.HTTPServer(Application())
-    httpserver.listen(tornado.options.options.port)
+    httpserver.listen(options.port)
     tornado.ioloop.IOLoop().instance().start()
-
-if __name__ == "__main__":
-    main()
