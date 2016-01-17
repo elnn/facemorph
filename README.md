@@ -3,10 +3,4 @@ Facemorph
 
 Interactive face evolution.
 
-![result](http://facemorph.elnn.kr/static/img/faces/5708ffdbc140.png)
-
-
-Demo
-----
-
-http://facemorph.elnn.kr/
+![result](http://i.imgur.com/38ndL3I.jpg)
